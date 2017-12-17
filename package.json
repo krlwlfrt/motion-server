@@ -1,0 +1,44 @@
+{
+  "name": "motion-server",
+  "version": "0.0.1",
+  "description": "",
+  "main": "lib/server.js",
+  "scripts": {
+    "build": "npm run tslint && npm run compile",
+    "compile": "./node_modules/.bin/tsc",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tslint": "./node_modules/.bin/tslint 'src/**/*.ts'"
+  },
+  "author": "Karl-Philipp Wulfert",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "commander": "^2.12.2",
+    "cookie-parser": "^1.4.3",
+    "express": "=4.16.2",
+    "express-session": "^1.15.6",
+    "glob": "^7.1.2",
+    "local-network-scanner": "^0.1.1",
+    "moment": "^2.20.0",
+    "nodemailer": "^4.4.1",
+    "pad": "^2.0.3",
+    "passport": "^0.4.0",
+    "passport-google-oauth2": "^0.1.6",
+    "shelljs": "^0.7.8"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.16.8",
+    "@types/cookie-parser": "^1.4.1",
+    "@types/express": "=4.0.39",
+    "@types/express-session": "^1.15.6",
+    "@types/glob": "^5.0.34",
+    "@types/nodemailer": "^4.3.1",
+    "@types/pad": "^1.0.1",
+    "@types/passport": "^0.4.2",
+    "@types/passport-google-oauth2": "^0.1.1",
+    "@types/shelljs": "^0.7.6",
+    "tslint": "^5.8.0",
+    "typescript": "=2.6.2"
+  },
+  "types": "lib/types.d.ts"
+}
