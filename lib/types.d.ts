@@ -6,42 +6,36 @@ import { MotionSettings } from './types.settings';
  */
 export declare const MOTION_MODES: string[];
 export declare const SETTINGS_META_DATA: {
-    _missesConsideredOffline: {
-        description: string;
-        title: string;
-        values: number[];
-    };
-    _scanTimeout: {
-        description: string;
-        title: string;
-        values: number[];
-    };
-    framerate: {
-        description: string;
-        title: string;
-        values: number[];
-    };
-    rotate: {
-        description: string;
-        title: string;
-        values: number[];
-    };
-    threshold: {
-        description: string;
-        title: string;
-    };
+    [s: string]: any;
 };
 /**
  * NodeJS callback
  */
-export declare type NodeJSCallback<T> = ((err: Error, result?: T) => void);
+export declare type NodeJSCallback = ((err: Error | null) => void);
+export declare type NodeJSCallbackWithResult<T> = ((err: Error | null, result: T) => void);
+/**
+ * Device
+ */
+export interface MotionAPIAbstractDevice {
+    mac: string;
+}
+export interface MotionAPIActiveDevice extends MotionAPIAbstractDevice {
+    ip: string;
+}
+export interface MotionAPITrustedDevice extends MotionAPIAbstractDevice {
+    name: string;
+    trusted: boolean;
+}
+export interface MotionAPIDevice extends MotionAPIActiveDevice, MotionAPITrustedDevice {
+}
 /**
  * List of active devices
  */
-export declare type MotionAPIActiveDeviceList = Array<{
-    ip: string;
-    mac: string;
-}>;
+export declare type MotionAPIActiveDevicesList = MotionAPIActiveDevice[];
+export declare type MotionAPITrustedDevicesList = {
+    [key: string]: MotionAPITrustedDevice;
+};
+export declare type MotionAPIDevicesList = MotionAPIDevice[];
 /**
  * Response from Motion API
  */
@@ -58,6 +52,9 @@ export interface MotionAPIResponse<T> {
      * Message that describes the response
      */
     message?: string;
+}
+export interface MotionAPITrustRequest {
+    mac: string;
 }
 /**
  * Sensible defaults for motion settings

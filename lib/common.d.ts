@@ -1,10 +1,10 @@
-import { MotionAPIActiveDeviceList, NodeJSCallback } from './types';
+import { MotionAPIActiveDevicesList, MotionAPIDevicesList, MotionAPITrustedDevicesList, NodeJSCallbackWithResult } from './types';
 /**
  * Get list of devices that are currently active on the network
  *
- * @param {NodeJSCallback<MotionAPIActiveDeviceList>} done
+ * @param {NodeJSCallback<MotionAPIActiveDevicesList>} done
  */
-export declare function getDevicesOnNetwork(done: NodeJSCallback<MotionAPIActiveDeviceList>): void;
+export declare function getDevicesOnNetwork(done: NodeJSCallbackWithResult<MotionAPIActiveDevicesList>): void;
 /**
  * Save motion.conf
  *
@@ -22,19 +22,19 @@ export declare function saveSettings(settings: any): void;
  *
  * @param {NodeJSCallback<string>} done
  */
-export declare function enableMotion(done: NodeJSCallback<string>): void;
+export declare function enableMotion(done: NodeJSCallbackWithResult<string>): void;
 /**
  * Disable motion
  *
  * @param {NodeJSCallback<string>} done
  */
-export declare function disableMotion(done: NodeJSCallback<string>): void;
+export declare function disableMotion(done: NodeJSCallbackWithResult<string>): void;
 /**
  * Save trusted devices
  *
  * @param {Object} trustedDevices List of trusted devices
  */
-export declare function saveTrustedDevices(trustedDevices: any): void;
+export declare function saveTrustedDevices(trustedDevices: MotionAPITrustedDevicesList): void;
 /**
  * Decorate active devices with information from trusted devices
  *
@@ -42,11 +42,11 @@ export declare function saveTrustedDevices(trustedDevices: any): void;
  * @param {Object} trustedDevices Map of trusted devices
  * @returns {Array}
  */
-export declare function decorateDevices(activeDevices: any, trustedDevices: any): any[];
+export declare function decorateDevices(activeDevices: MotionAPIActiveDevicesList, trustedDevices: MotionAPITrustedDevicesList): MotionAPIDevicesList;
 /**
  * Check if the session is logged in
  * @param req
  * @param res
  * @param next
  */
-export declare function isLoggedIn(req: any, res: any, next: any): void;
+export declare function isLoggedIn(req: any, res: any, next: () => void): void;
