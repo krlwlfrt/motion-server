@@ -1,6 +1,7 @@
 import * as bodyParser from 'body-parser';
 import * as cookieParser from 'cookie-parser';
 import * as express from 'express';
+import * as expressSession from 'express-session';
 import {existsSync, mkdirSync, readFileSync} from 'fs';
 import * as https from 'https';
 import {get} from 'https';
@@ -14,34 +15,37 @@ import {
   decorateDevices, disableMotion, enableMotion, getDevicesOnNetwork, isLoggedIn, saveMotionConf, saveSettings,
   saveTrustedDevices
 } from './common';
-import {MOTION_MODES, MotionSettingsSensibleDefaults, SETTINGS_META_DATA} from './types';
+import {
+  MOTION_MODES, MotionAPIDevicesList,
+  MotionAPITrustedDevicesList,
+  MotionAPITrustRequest,
+  MotionSettingsSensibleDefaults,
+  SETTINGS_META_DATA
+} from './types';
 
-const config = require(join(cwd(), 'config', 'config.json'));
+const config = JSON.parse(readFileSync(join(cwd(), 'config', 'config.json')).toString());
 
 // check if `arp-scan` is installed
 if (which('arp-scan') === null) {
-  console.error('Please install `arp-scan` to continue!');
-  process.exit(1);
+  throw new Error('Please install `arp-scan` to continue!');
 }
 
 // check if `motion` is installed
 if (which('motion') === null) {
-  console.error('Please install `motion` to continue!');
-  process.exit(1);
+  throw new Error('Please install `motion` to continue!');
 }
 
 if (!existsSync(join(cwd(), 'config', 'cert.pem')) || !existsSync(join(cwd(), 'config', 'key.pem'))) {
-  console.error('Please supply an SSL certiticate!');
-  console.log('You can automatically generate one with the following command!');
-  /* tslint:disable:max-line-length */
-  console.log('openssl req -x509 -newkey rsa:4096 -keyout ' + join(cwd(), 'config', 'key.pem') + ' -out ' + join(cwd(), 'config', 'cert.pem') + ' -days 3650 -nodes');
-  /* tslint:enable */
-  process.exit(1);
+  throw new Error(
+    'Please supply an SSL certiticate!\n'
+    + 'You can automatically generate one with the following command!\n'
+    + 'openssl req -x509 -newkey rsa:4096 -keyout ' + join(cwd(), 'config', 'key.pem') + '' +
+    '-out ' + join(cwd(), 'config', 'cert.pem') + ' -days 3650 -nodes'
+  );
 }
 
 if (!existsSync(join(cwd(), 'config', 'config.json'))) {
-  console.error('Please supply a config file!');
-  process.exit(1);
+  throw new Error('Please supply a config file!');
 }
 
 if (!existsSync(join(cwd(), 'config'))) {
@@ -67,8 +71,7 @@ const transporter = createTransport({
 
 transporter.verify((err) => {
   if (err) {
-    console.error(err);
-    process.exit(1);
+    throw err;
   }
 });
 
@@ -76,10 +79,10 @@ transporter.verify((err) => {
 let settings: any = {};
 
 // list of devices, active and trusted
-let devices = [];
+let devices: MotionAPIDevicesList = [];
 
 // map of trusted devices
-let trustedDevices = {};
+let trustedDevices: MotionAPITrustedDevicesList = {};
 
 // current mode
 let mode = 'auto';
@@ -93,7 +96,7 @@ let cameraEnabled = false;
 // check if we have saved settings
 if (existsSync(cwd() + '/database/motionSettings.json')) {
   // load saved settings
-  settings = require(cwd() + '/database/motionSettings.json');
+  settings = JSON.parse(readFileSync(join(cwd(), 'database', 'motionSettings.json')).toString());
 } else {
   // create initial settings and save them
   settings = new MotionSettingsSensibleDefaults();
@@ -105,7 +108,7 @@ saveMotionConf(settings);
 
 // load trusted devices
 if (existsSync(cwd() + '/database/trustedDevices.json')) {
-  trustedDevices = require(cwd() + '/database/trustedDevices.json');
+  trustedDevices = JSON.parse(readFileSync(join(cwd(), 'database', 'trustedDevices.json')).toString());
 }
 
 /**
@@ -113,6 +116,10 @@ if (existsSync(cwd() + '/database/trustedDevices.json')) {
  */
 function scan() {
   getDevicesOnNetwork((err, activeDevices) => {
+    if (err) {
+      throw err;
+    }
+
     devices = decorateDevices(activeDevices, trustedDevices);
 
     let trustedActiveDeviceFound = false;
@@ -128,10 +135,10 @@ function scan() {
       if (mode === 'auto' && cameraEnabled) {
         disableMotion((disableErr, msg) => {
           if (disableErr) {
-            console.error(disableErr);
-            return;
+            throw disableErr;
           }
 
+          /* tslint:disable:no-console */
           console.info(msg);
           cameraEnabled = false;
         });
@@ -169,7 +176,7 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 
 // use express session
-app.use(require('express-session')({
+app.use(expressSession({
   resave: false,
   saveUninitialized: false,
   secret: config.google.clientSecret
@@ -194,7 +201,7 @@ passport.deserializeUser((user: string, done) => {
 // configure google oauth2 passport strategy
 passport.use(new Strategy(
   config.google,
-  (accessToken, refreshToken, profile, done) => {
+  (_accessToken, _refreshToken, profile, done) => {
     done(null, profile);
   }));
 
@@ -208,13 +215,17 @@ app.get('/auth/google/callback', passport.authenticate('google', {
 }));
 
 // define route to get the mode
-app.get('/api/mode', isLoggedIn, (request, result) => {
+app.get('/api/mode', isLoggedIn, (_request, result) => {
   result.send({status: true, data: mode});
 });
 
 // define route to get the status
-app.get('/api/status', isLoggedIn, (request, result) => {
+app.get('/api/status', isLoggedIn, (_request, result) => {
   exec('ps cax | grep motion', {silent: true}, (code, stdOut, stdErr) => {
+    if (stdErr) {
+      throw new Error(stdErr);
+    }
+
     if (code === 0 && stdOut.indexOf('motion') >= 0) {
       result.send({status: true});
       return;
@@ -225,7 +236,7 @@ app.get('/api/status', isLoggedIn, (request, result) => {
 });
 
 // define route to get the settings
-app.get('/api/settings', isLoggedIn, (request, result) => {
+app.get('/api/settings', isLoggedIn, (_request, result) => {
   result.send([
     'rotate',
     '_scanTimeout',
@@ -244,7 +255,7 @@ app.get('/api/settings', isLoggedIn, (request, result) => {
 });
 
 // define route to get the devices
-app.get('/api/devices', isLoggedIn, (request, result) => {
+app.get('/api/devices', isLoggedIn, (_request, result) => {
   result.send({status: true, data: devices});
 });
 
@@ -315,7 +326,7 @@ app.post('/api/devices/trust', isLoggedIn, bodyParser.json(), (request, result) 
 });
 
 // define route to untrust a device
-app.post('/api/devices/untrust', isLoggedIn, bodyParser.json(), (request, result) => {
+app.post('/api/devices/untrust', isLoggedIn, bodyParser.json(), (request: { body: MotionAPITrustRequest }, result) => {
   if (typeof trustedDevices[request.body.mac] !== 'undefined') {
     delete trustedDevices[request.body.mac];
 

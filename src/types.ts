@@ -14,7 +14,7 @@ export const MOTION_MODES = [
 ];
 
 /* tslint:disable:max-line-length */
-export const SETTINGS_META_DATA = {
+export const SETTINGS_META_DATA: { [s: string]: any } = {
   _missesConsideredOffline: {
     description: 'Nach wie vielen Scans, ohne dass ein vertrauenswürdiges Gerät gefunden wurde, soll die Kamera eingeschaltet werden?',
     title: '"Erfolglose" Scans',
@@ -45,12 +45,37 @@ export const SETTINGS_META_DATA = {
 /**
  * NodeJS callback
  */
-export type NodeJSCallback<T> = ((err: Error, result?: T) => void);
+export type NodeJSCallback = ((err: Error | null) => void);
+export type NodeJSCallbackWithResult<T> = ((err: Error | null, result: T) => void);
+
+/**
+ * Device
+ */
+export interface MotionAPIAbstractDevice {
+  mac: string;
+}
+
+export interface MotionAPIActiveDevice extends MotionAPIAbstractDevice {
+  ip: string;
+}
+
+export interface MotionAPITrustedDevice extends MotionAPIAbstractDevice {
+  name: string;
+  trusted: boolean;
+}
+
+export interface MotionAPIDevice extends MotionAPIActiveDevice, MotionAPITrustedDevice {
+}
 
 /**
  * List of active devices
  */
-export type MotionAPIActiveDeviceList = Array<{ ip: string; mac: string }>;
+export type MotionAPIActiveDevicesList = MotionAPIActiveDevice[];
+
+/* tslint:disable:interface-over-type-literal */
+export type MotionAPITrustedDevicesList = { [key: string]: MotionAPITrustedDevice };
+
+export type MotionAPIDevicesList = MotionAPIDevice[];
 
 /**
  * Response from Motion API
@@ -70,6 +95,10 @@ export interface MotionAPIResponse<T> {
    * Message that describes the response
    */
   message?: string;
+}
+
+export interface MotionAPITrustRequest {
+  mac: string;
 }
 
 /**

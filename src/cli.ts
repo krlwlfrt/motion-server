@@ -1,13 +1,17 @@
 import * as commander from 'commander';
-import {readFile, writeFile} from 'fs';
+import {readFile, readFileSync, writeFile} from 'fs';
 import {join} from 'path';
 import {cwd} from 'process';
 
-commander.version(require(join(cwd(), 'package.json')))
+commander.version((readFileSync(join(cwd(), 'package.json')).toString() as any).version)
   .option('-p, --path [path]', 'Path to distribution\'s motion conf')
   .parse(process.argv);
 
 readFile(commander.path, {encoding: 'utf8'}, (err, content) => {
+  if (err) {
+    throw err;
+  }
+
   const settings: { [s: string]: { description: string[]; value: string; optional: boolean } } = {};
   let gatheredDescription: string[] = [];
 

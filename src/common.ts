@@ -1,20 +1,24 @@
-import {writeFileSync} from 'fs';
+import {readFileSync, writeFileSync} from 'fs';
+import * as localNetworkScanner from 'local-network-scanner';
 import {join} from 'path';
 import {cwd} from 'process';
 import {exec} from 'shelljs';
-import {MotionAPIActiveDeviceList, NodeJSCallback} from './types';
+import {
+  MotionAPIActiveDevicesList,
+  MotionAPIDevicesList,
+  MotionAPITrustedDevicesList,
+  NodeJSCallbackWithResult
+} from './types';
 
-const localNetworkScanner = require('local-network-scanner');
-
-const config = require(join(cwd(), 'config', 'config.json'));
+const config = JSON.parse(readFileSync(join(cwd(), 'config', 'config.json')).toString());
 
 /**
  * Get list of devices that are currently active on the network
  *
- * @param {NodeJSCallback<MotionAPIActiveDeviceList>} done
+ * @param {NodeJSCallback<MotionAPIActiveDevicesList>} done
  */
-export function getDevicesOnNetwork(done: NodeJSCallback<MotionAPIActiveDeviceList>): void {
-  localNetworkScanner.scan((devices) => {
+export function getDevicesOnNetwork(done: NodeJSCallbackWithResult<MotionAPIActiveDevicesList>): void {
+  localNetworkScanner.scan(null, (devices: any[]) => {
     done(null, devices);
   });
 }
@@ -50,7 +54,7 @@ export function saveSettings(settings: any): void {
  *
  * @param {NodeJSCallback<string>} done
  */
-export function enableMotion(done: NodeJSCallback<string>): void {
+export function enableMotion(done: NodeJSCallbackWithResult<string>): void {
   exec('motion -b -c ' + join(cwd(), 'database', 'motion.conf'), {silent: true}, (code, stdOut, stdErr) => {
     if (code === 0) {
       done(null, stdOut);
@@ -66,7 +70,7 @@ export function enableMotion(done: NodeJSCallback<string>): void {
  *
  * @param {NodeJSCallback<string>} done
  */
-export function disableMotion(done: NodeJSCallback<string>): void {
+export function disableMotion(done: NodeJSCallbackWithResult<string>): void {
   exec('killall motion', {silent: false}, (code, stdOut, stdErr) => {
     if (code === 0) {
       done(null, stdOut);
@@ -82,7 +86,7 @@ export function disableMotion(done: NodeJSCallback<string>): void {
  *
  * @param {Object} trustedDevices List of trusted devices
  */
-export function saveTrustedDevices(trustedDevices): void {
+export function saveTrustedDevices(trustedDevices: MotionAPITrustedDevicesList): void {
   writeFileSync(join(cwd(), 'database', 'trustedDevices.json'), JSON.stringify(trustedDevices));
 }
 
@@ -93,25 +97,31 @@ export function saveTrustedDevices(trustedDevices): void {
  * @param {Object} trustedDevices Map of trusted devices
  * @returns {Array}
  */
-export function decorateDevices(activeDevices, trustedDevices): any[] {
+export function decorateDevices(activeDevices: MotionAPIActiveDevicesList,
+                                trustedDevices: MotionAPITrustedDevicesList): MotionAPIDevicesList {
   const pad = require('pad');
+  const devicesList: MotionAPIDevicesList = [];
 
-  Object.keys(trustedDevices).forEach((mac) => {
+  Object.keys(trustedDevices).forEach((mac: string) => {
     let trustedDeviceOnline = false;
     const trustedDevice = trustedDevices[mac];
 
     activeDevices.forEach((device) => {
       if (device.mac === mac) {
-        Object.assign(device, {
-          name: trustedDevice.name,
-          trusted: true
+        devicesList.push({
+          ...device,
+          ...{
+            name: trustedDevice.name,
+            trusted: true
+          }
         });
         trustedDeviceOnline = true;
       }
     });
 
     if (!trustedDeviceOnline) {
-      activeDevices.push({
+      devicesList.push({
+        ip: '',
         mac: trustedDevice.mac,
         name: trustedDevice.name,
         trusted: true
@@ -124,13 +134,13 @@ export function decorateDevices(activeDevices, trustedDevices): any[] {
     let sortB: number = parseInt(deviceB.mac.replace(/:/g, ''), 16) / 100000000;
 
     if (deviceA.ip) {
-      sortA = parseInt(deviceA.ip.split('.').map((part) => {
+      sortA = parseInt(deviceA.ip.split('.').map((part: string) => {
         return pad(3, part, '0');
       }).join(''), 10);
     }
 
     if (deviceB.ip) {
-      sortB = parseInt(deviceB.ip.split('.').map((part) => {
+      sortB = parseInt(deviceB.ip.split('.').map((part: string) => {
         return pad(3, part, '0');
       }).join(''), 10);
     }
@@ -138,7 +148,7 @@ export function decorateDevices(activeDevices, trustedDevices): any[] {
     return sortA - sortB;
   });
 
-  return activeDevices;
+  return devicesList;
 }
 
 /**
@@ -147,7 +157,7 @@ export function decorateDevices(activeDevices, trustedDevices): any[] {
  * @param res
  * @param next
  */
-export function isLoggedIn(req, res, next) {
+export function isLoggedIn(req: any, res: any, next: () => void) {
   if (req.user) {
     if (config.allowedEmails.indexOf(req.user.email) === -1) {
       res.sendStatus(403);

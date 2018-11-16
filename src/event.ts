@@ -1,10 +1,12 @@
-import {writeFileSync} from 'fs';
+import {readFileSync, writeFileSync} from 'fs';
 import * as G from 'glob';
 import * as moment from 'moment';
 import {createTransport} from 'nodemailer';
 import {basename, join} from 'path';
 
-const config = require(join(__dirname, '..', 'config', 'config.json'));
+/* tslint:disable:no-console */
+
+const config = JSON.parse(readFileSync(join(__dirname, '..', 'config', 'config.json')).toString());
 
 const transporter = createTransport({
   auth: {
@@ -17,7 +19,7 @@ const transporter = createTransport({
 
 transporter.verify((err) => {
   if (err) {
-    console.error(err);
+    throw err;
   }
 });
 
@@ -32,7 +34,13 @@ setTimeout(() => {
     '|' + now.format('YYYYMMDD-HHmmss').substr(0, 14) +
     '|' + end.format('YYYYMMDD-HHmmss').substr(0, 14) + ')*.jpg';
 
+  console.log(start, now, end, glob);
+
   G(glob, {}, (err, files) => {
+    if (err) {
+      throw err;
+    }
+
     if (files.length > 20) {
       files = files.slice(files.length - 20, files.length - 1);
     }
@@ -56,7 +64,7 @@ setTimeout(() => {
 
     transporter.sendMail(message, (sendErr, info) => {
       if (sendErr) {
-        console.error(sendErr);
+        throw sendErr;
       }
 
       console.log(info);
