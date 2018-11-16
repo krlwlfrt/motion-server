@@ -3,19 +3,16 @@
   "extends": [
     "tslint:recommended"
   ],
-  "jsRules": {},
   "rules": {
     "interface-name": [
       true,
       "never-prefix"
     ],
-    "no-console": false,
     "quotemark": [
       true,
       "single",
       "avoid-escape"
     ],
-    "no-var-requires": false,
     "no-trailing-whitespace": [
       true,
       "ignore-comments",
@@ -35,7 +32,6 @@
         "named-imports-order": "case-insensitive"
       }
     ],
-    "no-string-literal": false,
     "indent": [
       true,
       "spaces",
@@ -46,10 +42,6 @@
       "ban-keywords",
       "check-format",
       "allow-leading-underscore"
-    ],
-    "interface-name": [
-      false
     ]
-  },
-  "rulesDirectory": []
+  }
 }
