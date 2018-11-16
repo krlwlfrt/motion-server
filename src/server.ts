@@ -12,11 +12,18 @@ import {join} from 'path';
 import {cwd} from 'process';
 import {exec, which} from 'shelljs';
 import {
-  decorateDevices, disableMotion, enableMotion, getDevicesOnNetwork, isLoggedIn, saveMotionConf, saveSettings,
+  decorateDevices,
+  disableMotion,
+  enableMotion,
+  getDevicesOnNetwork,
+  isLoggedIn,
+  saveMotionConf,
+  saveSettings,
   saveTrustedDevices
 } from './common';
 import {
-  MOTION_MODES, MotionAPIDevicesList,
+  MOTION_MODES,
+  MotionAPIDevicesList,
   MotionAPITrustedDevicesList,
   MotionAPITrustRequest,
   MotionSettingsSensibleDefaults,
