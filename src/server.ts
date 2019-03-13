@@ -19,15 +19,16 @@ import {
   isLoggedIn,
   saveMotionConf,
   saveSettings,
-  saveTrustedDevices
+  saveTrustedDevices,
 } from './common';
 import {
+  isMotionAPITrustedDevice,
   MOTION_MODES,
-  MotionAPIDevicesList,
+  MotionAPIAbstractDevice,
   MotionAPITrustedDevicesList,
   MotionAPITrustRequest,
   MotionSettingsSensibleDefaults,
-  SETTINGS_META_DATA
+  SETTINGS_META_DATA,
 } from './types';
 
 const config = JSON.parse(readFileSync(join(cwd(), 'config', 'config.json')).toString());
@@ -47,7 +48,7 @@ if (!existsSync(join(cwd(), 'config', 'cert.pem')) || !existsSync(join(cwd(), 'c
     'Please supply an SSL certiticate!\n'
     + 'You can automatically generate one with the following command!\n'
     + 'openssl req -x509 -newkey rsa:4096 -keyout ' + join(cwd(), 'config', 'key.pem') + '' +
-    '-out ' + join(cwd(), 'config', 'cert.pem') + ' -days 3650 -nodes'
+    '-out ' + join(cwd(), 'config', 'cert.pem') + ' -days 3650 -nodes',
   );
 }
 
@@ -70,10 +71,10 @@ if (!existsSync(join(cwd(), 'database', 'events'))) {
 const transporter = createTransport({
   auth: {
     pass: config.smtp.pass,
-    user: config.smtp.user
+    user: config.smtp.user,
   },
   host: 'smtp.gmail.com',
-  secure: true
+  secure: true,
 });
 
 transporter.verify((err) => {
@@ -86,7 +87,7 @@ transporter.verify((err) => {
 let settings: any = {};
 
 // list of devices, active and trusted
-let devices: MotionAPIDevicesList = [];
+let devices: MotionAPIAbstractDevice[] = [];
 
 // map of trusted devices
 let trustedDevices: MotionAPITrustedDevicesList = {};
@@ -131,7 +132,7 @@ function scan() {
 
     let trustedActiveDeviceFound = false;
     devices.forEach((device) => {
-      if (device.trusted && device.ip) {
+      if (isMotionAPITrustedDevice(device)) {
         trustedActiveDeviceFound = true;
       }
     });
@@ -186,7 +187,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(expressSession({
   resave: false,
   saveUninitialized: false,
-  secret: config.google.clientSecret
+  secret: config.google.clientSecret,
 }));
 
 // initialize passport
@@ -218,7 +219,7 @@ app.get('/auth/google', passport.authenticate('google', {}));
 // define route for login callback
 app.get('/auth/google/callback', passport.authenticate('google', {
   failureRedirect: '/auth/google',
-  successRedirect: '/app'
+  successRedirect: '/app',
 }));
 
 // define route to get the mode
@@ -249,14 +250,14 @@ app.get('/api/settings', isLoggedIn, (_request, result) => {
     '_scanTimeout',
     '_missesConsideredOffline',
     'framerate',
-    'threshold'
+    'threshold',
   ].map((key) => {
     return {
       description: SETTINGS_META_DATA[key].description,
       key: key,
       title: SETTINGS_META_DATA[key].title,
       value: settings[key],
-      values: SETTINGS_META_DATA[key].values
+      values: SETTINGS_META_DATA[key].values,
     };
   }));
 });
@@ -358,7 +359,7 @@ app.use('/images', isLoggedIn, express.static(join(cwd(), 'database', 'images'))
 // start https server
 https.createServer({
   cert: readFileSync(join(cwd(), 'config', 'cert.pem')),
-  key: readFileSync(join(cwd(), 'config', 'key.pem'))
+  key: readFileSync(join(cwd(), 'config', 'key.pem')),
 }, app).listen(3000, () => {
   console.info('Server running...');
 });

@@ -4,10 +4,12 @@ import {join} from 'path';
 import {cwd} from 'process';
 import {exec} from 'shelljs';
 import {
+  isMotionAPIAbstractDevice,
+  MotionAPIAbstractDevice,
   MotionAPIActiveDevicesList,
   MotionAPIDevicesList,
   MotionAPITrustedDevicesList,
-  NodeJSCallbackWithResult
+  NodeJSCallbackWithResult,
 } from './types';
 
 const config = JSON.parse(readFileSync(join(cwd(), 'config', 'config.json')).toString());
@@ -97,7 +99,7 @@ export function saveTrustedDevices(trustedDevices: MotionAPITrustedDevicesList):
  * @param {Object} trustedDevices Map of trusted devices
  * @returns {Array}
  */
-export function decorateDevices(activeDevices: MotionAPIActiveDevicesList,
+export function decorateDevices(activeDevices: MotionAPIAbstractDevice[],
                                 trustedDevices: MotionAPITrustedDevicesList): MotionAPIDevicesList {
   const pad = require('pad');
   const devicesList: MotionAPIDevicesList = [];
@@ -112,8 +114,8 @@ export function decorateDevices(activeDevices: MotionAPIActiveDevicesList,
           ...device,
           ...{
             name: trustedDevice.name,
-            trusted: true
-          }
+            trusted: true,
+          },
         });
         trustedDeviceOnline = true;
       }
@@ -121,10 +123,9 @@ export function decorateDevices(activeDevices: MotionAPIActiveDevicesList,
 
     if (!trustedDeviceOnline) {
       devicesList.push({
-        ip: '',
         mac: trustedDevice.mac,
         name: trustedDevice.name,
-        trusted: true
+        trusted: true,
       });
     }
   });
@@ -133,13 +134,13 @@ export function decorateDevices(activeDevices: MotionAPIActiveDevicesList,
     let sortA: number = parseInt(deviceA.mac.replace(/:/g, ''), 16) / 100000000;
     let sortB: number = parseInt(deviceB.mac.replace(/:/g, ''), 16) / 100000000;
 
-    if (deviceA.ip) {
+    if (isMotionAPIAbstractDevice(deviceA) && deviceA.ip) {
       sortA = parseInt(deviceA.ip.split('.').map((part: string) => {
         return pad(3, part, '0');
       }).join(''), 10);
     }
 
-    if (deviceB.ip) {
+    if (isMotionAPIAbstractDevice(deviceB) && deviceB.ip) {
       sortB = parseInt(deviceB.ip.split('.').map((part: string) => {
         return pad(3, part, '0');
       }).join(''), 10);
@@ -148,7 +149,7 @@ export function decorateDevices(activeDevices: MotionAPIActiveDevicesList,
     return sortA - sortB;
   });
 
-  devicesList.push.apply(devicesList, activeDevices);
+  devicesList.push.apply(devicesList, activeDevices as MotionAPIDevicesList);
 
   return devicesList;
 }
@@ -160,8 +161,6 @@ export function decorateDevices(activeDevices: MotionAPIActiveDevicesList,
  * @param next
  */
 export function isLoggedIn(req: any, res: any, next: () => void) {
-  next();
-  return;
   if (req.user) {
     if (config.allowedEmails.indexOf(req.user.email) === -1) {
       res.sendStatus(403);

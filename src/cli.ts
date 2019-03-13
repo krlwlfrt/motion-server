@@ -12,7 +12,7 @@ readFile(commander.path, {encoding: 'utf8'}, (err, content) => {
     throw err;
   }
 
-  const settings: { [s: string]: { description: string[]; value: string; optional: boolean } } = {};
+  const settings: { [s: string]: { description: string[]; optional: boolean; value: string; } } = {};
   let gatheredDescription: string[] = [];
 
   content
@@ -48,7 +48,7 @@ readFile(commander.path, {encoding: 'utf8'}, (err, content) => {
       settings[setting] = {
         description: gatheredDescription,
         optional: optional,
-        value: value
+        value: value,
       };
 
       gatheredDescription = [];
