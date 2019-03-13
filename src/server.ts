@@ -133,7 +133,7 @@ function scan() {
     let trustedActiveDeviceFound = false;
     devices.forEach((device) => {
       if (isMotionAPITrustedDevice(device)) {
-        trustedActiveDeviceFound = true;
+        trustedActiveDeviceFound = trustedActiveDeviceFound || device.trusted;
       }
     });
 
