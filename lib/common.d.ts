@@ -1,4 +1,4 @@
-import { MotionAPIActiveDevicesList, MotionAPIDevicesList, MotionAPITrustedDevicesList, NodeJSCallbackWithResult } from './types';
+import { MotionAPIAbstractDevice, MotionAPIActiveDevicesList, MotionAPIDevicesList, MotionAPITrustedDevicesList, NodeJSCallbackWithResult } from './types';
 /**
  * Get list of devices that are currently active on the network
  *
@@ -42,7 +42,7 @@ export declare function saveTrustedDevices(trustedDevices: MotionAPITrustedDevic
  * @param {Object} trustedDevices Map of trusted devices
  * @returns {Array}
  */
-export declare function decorateDevices(activeDevices: MotionAPIActiveDevicesList, trustedDevices: MotionAPITrustedDevicesList): MotionAPIDevicesList;
+export declare function decorateDevices(activeDevices: MotionAPIAbstractDevice[], trustedDevices: MotionAPITrustedDevicesList): MotionAPIDevicesList;
 /**
  * Check if the session is logged in
  * @param req

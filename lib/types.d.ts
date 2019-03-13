@@ -26,8 +26,9 @@ export interface MotionAPITrustedDevice extends MotionAPIAbstractDevice {
     name: string;
     trusted: boolean;
 }
-export interface MotionAPIDevice extends MotionAPIActiveDevice, MotionAPITrustedDevice {
-}
+export declare function isMotionAPITrustedDevice(device: any): device is MotionAPITrustedDevice;
+export declare function isMotionAPIAbstractDevice(device: any): device is MotionAPIActiveDevice;
+export declare type MotionAPIDevice = MotionAPIActiveDevice | MotionAPITrustedDevice;
 /**
  * List of active devices
  */
@@ -41,10 +42,6 @@ export declare type MotionAPIDevicesList = MotionAPIDevice[];
  */
 export interface MotionAPIResponse<T> {
     /**
-     * Status of the response
-     */
-    status: boolean;
-    /**
      * Data of the response
      */
     data?: T;
@@ -52,6 +49,10 @@ export interface MotionAPIResponse<T> {
      * Message that describes the response
      */
     message?: string;
+    /**
+     * Status of the response
+     */
+    status: boolean;
 }
 export interface MotionAPITrustRequest {
     mac: string;
