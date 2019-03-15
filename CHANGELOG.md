@@ -1,3 +1,12 @@
+## [0.1.1](https://github.com/krlwlfrt/motion-server/compare/v0.1.0...v0.1.1) (2019-03-15)
+
+
+### Bug Fixes
+
+* add wrapper for log in check ([f2a9547](https://github.com/krlwlfrt/motion-server/commit/f2a9547))
+
+
+
 # [0.1.0](https://github.com/krlwlfrt/motion-server/compare/d56f7a0...v0.1.0) (2019-03-15)
 
 
