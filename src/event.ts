@@ -1,104 +1,84 @@
-import {createHash} from 'crypto';
-import {readFileSync, writeFileSync} from 'fs';
-import * as G from 'glob';
 import * as moment from 'moment';
 import {createTransport} from 'nodemailer';
-import {basename, join} from 'path';
+import {basename, join, resolve} from 'path';
+import {eventsPath, globPromisified, hash, loadConfig, loadSettings, sleep, writeFilePromisified} from './common';
 
-// read config
-const config = JSON.parse(readFileSync(join(__dirname, '..', 'config', 'config.json')).toString());
+export class MotionEvent {
+  config = loadConfig();
+  settings = loadSettings();
 
-// create transport
-const transporter = createTransport({
-  auth: {
-    pass: config.smtp.pass,
-    user: config.smtp.user,
-  },
-  host: 'smtp.gmail.com',
-  secure: true,
-});
+  /**
+   * Invoke the event
+   */
+  async invoke() {
+    // create transport - has been verified on server startup
+    const transporter = createTransport({
+      auth: {
+        pass: this.config.smtp.pass,
+        user: this.config.smtp.user,
+      },
+      host: 'smtp.gmail.com',
+      secure: true,
+    });
 
-// verify the transport
-transporter.verify((err) => {
-  if (err) {
-    throw err;
-  }
-});
+    // @ts-ignore TODO
+    await sleep(this.settings._eventDelay * 1000);
 
-/**
- * Calculate md5 hash of something
- * @param content Something to calculate md5 hash for
- */
-function md5(content: string): string {
-  const hash = createHash('md5');
-  hash.update(content);
-  return hash.digest('hex').toString();
-}
+    const now = moment();
+    // @ts-ignore TODO
+    const start = moment(now).subtract(this.settings._eventDelay + 5, 'seconds');
+    const iterator = moment(start);
 
-setTimeout(() => {
-  const now = moment('2017-12-17T22:05:40');
-  const start = moment(now).subtract(20, 'seconds');
-  const iterator = moment(start);
+    let glob = resolve(__dirname, '..', 'database', 'images')
+      + '/@(' + start.format('YYYYMMDD-HHmmss').substr(0, 14);
 
-  let glob = join(__dirname, '..', 'database', 'images')
-    + '/@(' + start.format('YYYYMMDD-HHmmss').substr(0, 14);
-
-  for (let i = 0; i < 4; i++) {
-    iterator.add(10, 'seconds');
-    glob += '|' + iterator.format('YYYYMMDD-HHmmss').substr(0, 14);
-  }
-
-  glob += ')*.jpg';
-
-  console.log(now.toISOString(), start.toISOString(), iterator.toISOString(), glob);
-
-  G(glob, {}, (err, files) => {
-    if (err) {
-      throw err;
+    for (let i = 0; i < 4; i++) {
+      iterator.add(10, 'seconds');
+      glob += '|' + iterator.format('YYYYMMDD-HHmmss').substr(0, 14);
     }
 
-    if (files.length > 30) {
-      files = files.slice(files.length - 30, files.length - 1);
-    }
+    glob += ')*.jpg';
+
+    console.log(now.toISOString(), start.toISOString(), iterator.toISOString(), glob);
+
+    const files = await globPromisified(glob);
 
     if (files.length === 0) {
       console.info('No images to send.');
       return;
     }
 
+    // copy list of files
+    let filesToSend = files.slice();
+
+    // @ts-ignore TODO
+    if (filesToSend.length > this.settings._numberOfImages) {
+      // @ts-ignore TODO
+      filesToSend = filesToSend.slice(filesToSend.length - this.settings._numberOfImages);
+    }
+
+    // compile message
     const message = {
-      attachments: files.map((file) => {
+      attachments: filesToSend.map((file) => {
         return {
-          cid: md5(file),
+          cid: hash(file),
           filename: basename(file),
           path: file,
         };
       }),
-      from: config.smtp.user,
-      html: files.map((file) => {
-        return `<img src="cid:${md5(file)}" width="100%"/>`;
+      from: this.config.smtp.user,
+      html: filesToSend.map((file) => {
+        return `<img src="cid:${hash(file)}" width="100%" alt="${basename(file)}"/>`;
       }).join('<br/>'),
       subject: '[Motion] ' + now.toLocaleString(),
-      to: config.allowedEmails,
+      to: this.config.allowedEmails,
     };
 
-    transporter.sendMail(message, (sendErr, info) => {
-      if (sendErr) {
-        throw sendErr;
-      }
+    const results = await Promise.all([
+      transporter.sendMail(message),
+      writeFilePromisified(join(eventsPath, now.format('X')), JSON.stringify(files.map((file) => basename(file)))),
+    ]);
 
-      console.log(info);
-    });
-
-    writeFileSync(
-      join(
-        __dirname,
-        '..',
-        'database',
-        'events',
-        now.format('X'),
-      ),
-      JSON.stringify(files.map((file) => basename(file))),
-    );
-  });
-}, 10000);
+    console.info(results[0]);
+  }
+}

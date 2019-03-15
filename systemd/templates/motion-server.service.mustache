@@ -1,0 +1,11 @@
+[Unit]
+Description=Motion server
+
+[Service]
+ExecStart=/usr/bin/env node {{& path}}/dist/cli.js start
+WorkingDirectory={{& path}}
+User=root
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

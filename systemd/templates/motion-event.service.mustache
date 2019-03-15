@@ -1,0 +1,11 @@
+[Unit]
+Description=Motion event
+
+[Service]
+ExecStart=/usr/bin/env node {{& path}}/dist/cli.js event
+WorkingDirectory={{& path}}
+User=root
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target

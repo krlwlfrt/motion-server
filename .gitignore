@@ -84,8 +84,8 @@ typings/
 .idea
 .vscode
 
-# ignore lib
-lib
+# ignore dist
+dist
 
 # ignore docs
 docs
@@ -93,3 +93,5 @@ docs
 # sensitive directories
 config
 database
+systemd
+!systemd/templates

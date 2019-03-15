@@ -1,117 +1,157 @@
-import {readFileSync, writeFileSync} from 'fs';
-import * as localNetworkScanner from 'local-network-scanner';
-import {join} from 'path';
-import {cwd} from 'process';
+import {createHash} from 'crypto';
+import {existsSync, readdir, readFile, readFileSync, writeFile} from 'fs';
+import * as G from 'glob';
+import {resolve} from 'path';
 import {exec} from 'shelljs';
-import {
-  isMotionAPIAbstractDevice,
-  MotionAPIAbstractDevice,
-  MotionAPIActiveDevicesList,
-  MotionAPIDevicesList,
-  MotionAPITrustedDevicesList,
-  NodeJSCallbackWithResult,
-} from './types';
+import {promisify} from 'util';
+import {SensibleSettings} from './config';
+import {NetworkDevice} from './types';
+import {Settings} from './types.settings';
 
-const config = JSON.parse(readFileSync(join(cwd(), 'config', 'config.json')).toString());
+export const globPromisified = promisify(G);
+export const readdirPromisified = promisify(readdir);
+export const readFilePromisified = promisify(readFile);
+export const writeFilePromisified = promisify(writeFile);
+
+export const configPath = resolve(__dirname, '..', 'config', 'config.json');
+export const eventsPath = resolve(__dirname, '..', 'database', 'events');
+export const motionConfigPath = resolve(__dirname, '..', 'config', 'motion.conf');
+export const settingsPath = resolve(__dirname, '..', 'config', 'settings.json');
+export const trustedDevicesPath = resolve(__dirname, '..', 'config', 'trustedDevices.json');
 
 /**
- * Get list of devices that are currently active on the network
+ * Sleep/wait for a specified duration
  *
- * @param {NodeJSCallback<MotionAPIActiveDevicesList>} done
+ * @param duration Duration to sleep/wait in milliseconds
  */
-export function getDevicesOnNetwork(done: NodeJSCallbackWithResult<MotionAPIActiveDevicesList>): void {
-  localNetworkScanner.scan(null, (devices: any[]) => {
-    done(null, devices);
+export async function sleep(duration: number): Promise<void> {
+  return new Promise((resolvePromise) => {
+    setTimeout(() => {
+      resolvePromise();
+    }, duration);
   });
 }
 
 /**
- * Save motion.conf
- *
- * @param {Object} settings
+ * Get list of devices that are currently active on the network
  */
-export function saveMotionConf(settings: any): void {
-  let motionConf = '';
+export async function getDevicesOnNetwork(): Promise<Array<Required<NetworkDevice>>> {
+  const localNetworkScanner = require('local-network-scanner');
+
+  return new Promise((resolvePromise) => {
+    localNetworkScanner.scan(null, (devices: Array<Required<NetworkDevice>>) => {
+      resolvePromise(devices);
+    });
+  });
+}
+
+/**
+ * Compile and save a list of settings as motion.conf
+ */
+export async function saveMotionConfig(settings: Settings): Promise<void> {
+  let motionConfig = '';
+
+  // concatenate settings with new lines
   Object.keys(settings).forEach((key) => {
     if (key.indexOf('_') === 0) {
       return;
     }
 
-    motionConf += key + ' ' + settings[key] + '\n';
+    motionConfig += key + ' ' + settings[key] + '\n';
   });
-  writeFileSync(join(cwd(), 'database', 'motion.conf'), motionConf);
+
+  return writeFilePromisified(motionConfigPath, motionConfig);
 }
 
 /**
  * Save settings
- *
- * @param {Object} settings
  */
-export function saveSettings(settings: any): void {
-  writeFileSync(join(cwd(), 'database', 'motionSettings.json'), JSON.stringify(settings));
+export async function saveSettings(settings: Settings): Promise<void> {
+  return writeFilePromisified(settingsPath, JSON.stringify(settings));
+}
+
+/**
+ * Load settings
+ */
+export function loadSettings(): Settings {
+  // check if we have saved settings
+  if (existsSync(settingsPath)) {
+    // load saved settings
+    return JSON.parse(readFileSync(settingsPath).toString());
+  }
+
+  // create initial settings and save them
+  return new SensibleSettings();
 }
 
 /**
  * Enable motion
- *
- * @param {NodeJSCallback<string>} done
  */
-export function enableMotion(done: NodeJSCallbackWithResult<string>): void {
-  exec('motion -b -c ' + join(cwd(), 'database', 'motion.conf'), {silent: true}, (code, stdOut, stdErr) => {
-    if (code === 0) {
-      done(null, stdOut);
-      return;
-    }
+export async function enableMotion(): Promise<string> {
+  return new Promise((resolvePromise, rejectPromise) => {
+    exec(`motion -b -c ${motionConfigPath}`, {silent: true}, (code, stdOut, stdErr) => {
+      console.log(code, stdOut, stdErr);
 
-    done(new Error(stdErr), code.toString());
+      if (code === 0) {
+        return resolvePromise(stdOut);
+      }
+
+      rejectPromise(stdErr);
+    });
   });
 }
 
 /**
  * Disable motion
- *
- * @param {NodeJSCallback<string>} done
  */
-export function disableMotion(done: NodeJSCallbackWithResult<string>): void {
-  exec('killall motion', {silent: false}, (code, stdOut, stdErr) => {
-    if (code === 0) {
-      done(null, stdOut);
-      return;
-    }
+export async function disableMotion(): Promise<string> {
+  return new Promise((resolvePromise, rejectPromise) => {
+    exec('killall motion', {silent: false}, (code, stdOut, stdErr) => {
+      if (code === 0) {
+        return resolvePromise(stdOut);
+      }
 
-    done(new Error(stdErr), code.toString());
+      rejectPromise(stdErr);
+    });
   });
 }
 
 /**
  * Save trusted devices
- *
- * @param {Object} trustedDevices List of trusted devices
  */
-export function saveTrustedDevices(trustedDevices: MotionAPITrustedDevicesList): void {
-  writeFileSync(join(cwd(), 'database', 'trustedDevices.json'), JSON.stringify(trustedDevices));
+export function saveTrustedDevices(trustedDevices: NetworkDevice[]): Promise<void> {
+  return writeFilePromisified(trustedDevicesPath, JSON.stringify(trustedDevices));
+}
+
+/**
+ * Save trusted devices
+ */
+export function loadTrustedDevices(): NetworkDevice[] {
+  if (!existsSync(trustedDevicesPath)) {
+    return [];
+  }
+
+  return JSON.parse(readFileSync(trustedDevicesPath).toString());
 }
 
 /**
  * Decorate active devices with information from trusted devices
  *
- * @param {Array} activeDevices List of active devices
- * @param {Object} trustedDevices Map of trusted devices
- * @returns {Array}
+ * @param activeDevices List of active devices
+ * @param trustedDevices Map of trusted devices
  */
-export function decorateDevices(activeDevices: MotionAPIAbstractDevice[],
-                                trustedDevices: MotionAPITrustedDevicesList): MotionAPIDevicesList {
+export function decorateDevices(activeDevices: NetworkDevice[],
+                                trustedDevices: NetworkDevice[]): NetworkDevice[] {
   const pad = require('pad');
-  const devicesList: MotionAPIDevicesList = [];
+  const devicesList: NetworkDevice[] = [];
 
-  Object.keys(trustedDevices).forEach((mac) => {
+  trustedDevices.forEach((trustedDevice) => {
     let trustedDeviceOnline = false;
-    const trustedDevice = trustedDevices[mac];
 
-    activeDevices.forEach((device) => {
-      if (device.mac === mac) {
+    activeDevices.forEach((activeDevice) => {
+      if (activeDevice.mac === trustedDevice.mac) {
         devicesList.push({
-          ...device,
+          ...activeDevice,
           ...{
             name: trustedDevice.name,
             trusted: true,
@@ -125,7 +165,6 @@ export function decorateDevices(activeDevices: MotionAPIAbstractDevice[],
       devicesList.push({
         mac: trustedDevice.mac,
         name: trustedDevice.name,
-        trusted: true,
       });
     }
   });
@@ -134,13 +173,13 @@ export function decorateDevices(activeDevices: MotionAPIAbstractDevice[],
     let sortA: number = parseInt(deviceA.mac.replace(/:/g, ''), 16) / 100000000;
     let sortB: number = parseInt(deviceB.mac.replace(/:/g, ''), 16) / 100000000;
 
-    if (isMotionAPIAbstractDevice(deviceA) && deviceA.ip) {
+    if (deviceA.ip) {
       sortA = parseInt(deviceA.ip.split('.').map((part: string) => {
         return pad(3, part, '0');
       }).join(''), 10);
     }
 
-    if (isMotionAPIAbstractDevice(deviceB) && deviceB.ip) {
+    if (deviceB.ip) {
       sortB = parseInt(deviceB.ip.split('.').map((part: string) => {
         return pad(3, part, '0');
       }).join(''), 10);
@@ -149,25 +188,24 @@ export function decorateDevices(activeDevices: MotionAPIAbstractDevice[],
     return sortA - sortB;
   });
 
-  devicesList.push.apply(devicesList, activeDevices as MotionAPIDevicesList);
+  devicesList.push.apply(devicesList, activeDevices);
 
   return devicesList;
 }
 
 /**
- * Check if the session is logged in
- * @param req
- * @param res
- * @param next
+ * Get main config
  */
-export function isLoggedIn(req: any, res: any, next: () => void) {
-  if (req.user) {
-    if (config.allowedEmails.indexOf(req.user.email) === -1) {
-      res.sendStatus(403);
-    } else {
-      next();
-    }
-  } else {
-    res.redirect('/auth/google');
-  }
+export function loadConfig(): any {
+  return JSON.parse(readFileSync(configPath).toString());
+}
+
+/**
+ * Calculate a hash of something
+ * @param content Something to calculate hash for
+ */
+export function hash(content: string): string {
+  const hashBuffer = createHash('sha1');
+  hashBuffer.update(content);
+  return hashBuffer.digest('hex').toString();
 }

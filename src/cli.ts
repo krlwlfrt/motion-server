@@ -1,88 +1,38 @@
 import * as commander from 'commander';
-import {readFile, readFileSync, writeFile} from 'fs';
-import {join} from 'path';
-import {cwd} from 'process';
+import {readFileSync} from 'fs';
+import {resolve} from 'path';
+import {MotionEvent} from './event';
+import {install} from './install';
+import {parse} from './parse';
+import {Server} from './server';
 
-commander.version((readFileSync(join(cwd(), 'package.json')).toString() as any).version)
-  .option('-p, --path [path]', 'Path to distribution\'s motion conf')
-  .parse(process.argv);
+commander
+  .version(JSON.parse((readFileSync(resolve(__dirname, '..', 'package.json')).toString())).version);
 
-readFile(commander.path, {encoding: 'utf8'}, (err, content) => {
-  if (err) {
-    throw err;
-  }
-
-  const settings: { [s: string]: { description: string[]; optional: boolean; value: string; } } = {};
-  let gatheredDescription: string[] = [];
-
-  content
-    .split('\n')
-    .forEach((line) => {
-      if (line === '') {
-        return;
-      }
-
-      if (line.indexOf('##') === 0) {
-        gatheredDescription = [];
-        return;
-      }
-
-      if (line.indexOf('#') === 0) {
-        gatheredDescription.push(line.replace(/^#\s?/, ''));
-        return;
-      }
-
-      let optional = false;
-      if (line.indexOf(';') === 0) {
-        line = line.replace(/^;\s?/, '');
-        optional = true;
-      }
-
-      line = line.trim();
-      const parts = line.split(' ');
-      const setting = parts[0];
-
-      parts.splice(0, 1);
-      const value = parts.join(' ');
-
-      settings[setting] = {
-        description: gatheredDescription,
-        optional: optional,
-        value: value,
-      };
-
-      gatheredDescription = [];
-    });
-
-  let definition = '/* tslint:disable */\nexport class MotionSettings {\n';
-  Object.keys(settings).forEach((key) => {
-    const setting = settings[key];
-
-    let type = 'number';
-    let value = setting.value;
-    if (!setting.value.match(/^[0-9]+$/)) {
-      type = 'string';
-      value = '\'' + value.replace(/\'/g, '\\\'') + '\'';
-    }
-
-    definition += '  /**\n'
-      + setting.description.map((line) => {
-        return '   * ' + line;
-      }).join('\n')
-      + '\n   */\n'
-      + '  '
-      + ((setting.optional) ? '\'; ' + key + '\'?' : key)
-      + ': '
-      + type
-      + ' = '
-      + value
-      + ';\n\n';
+commander
+  .command('parse <path>')
+  .action((path) => {
+    parse(path);
   });
-  definition += '}\n';
 
-  writeFile('src/types.settings.ts', definition, (writeErr) => {
-    if (writeErr) {
-      throw writeErr;
-    }
+commander
+  .command('start')
+  .action(async () => {
+    const server = new Server();
+    await server.start();
   });
-});
+
+commander
+  .command('event')
+  .action(async () => {
+    const event = await new MotionEvent();
+    await event.invoke();
+  });
+
+commander
+  .command('install')
+  .action(async () => {
+    await install();
+  });
+
+commander.parse(process.argv);
