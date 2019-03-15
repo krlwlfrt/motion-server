@@ -82,7 +82,7 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
    * @param res
    * @param next
    */
-  isLoggedIn(req: express.Request, res: express.Response, next: () => void): void {
+  isLoggedIn(req: express.Request, res: express.Response, next: express.NextFunction): void {
     if (req.hostname === 'localhost') {
       next();
       return;
@@ -195,12 +195,16 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
     }));
 
     // define route to get the mode
-    app.get('/api/mode', this.isLoggedIn, (_request, result) => {
+    app.get('/api/mode', (req, res, next) => {
+      this.isLoggedIn(req, res, next);
+    }, (_request, result) => {
       result.send({status: true, data: this.mode});
     });
 
     // define route to get the status
-    app.get('/api/status', this.isLoggedIn, (_request, result) => {
+    app.get('/api/status', (req, res, next) => {
+      this.isLoggedIn(req, res, next);
+    }, (_request, result) => {
       exec('ps cax | grep motion', {silent: true}, (code, stdOut, stdErr) => {
         if (stdErr) {
           throw new Error(stdErr);
@@ -216,7 +220,9 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
     });
 
     // define route to get the settings
-    app.get('/api/settings', this.isLoggedIn, (_request, result) => {
+    app.get('/api/settings', (req, res, next) => {
+      this.isLoggedIn(req, res, next);
+    }, (_request, result) => {
       result.send(Object.keys(SETTINGS_META_DATA).map((key) => {
         return {
           description: SETTINGS_META_DATA[key].description,
@@ -229,12 +235,16 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
     });
 
     // define route to get the devices
-    app.get('/api/devices', this.isLoggedIn, (_request, result) => {
+    app.get('/api/devices', (req, res, next) => {
+      this.isLoggedIn(req, res, next);
+    }, (_request, result) => {
       result.send({status: true, data: this.devices});
     });
 
     // define route to set the mode
-    app.post('/api/mode', this.isLoggedIn, bodyParser.json(), async (request, result) => {
+    app.post('/api/mode', (req, res, next) => {
+      this.isLoggedIn(req, res, next);
+    }, bodyParser.json(), async (request, result) => {
       const mode = request.body.mode;
 
       if (Object.values(MotionMode).includes(mode)) {
@@ -264,7 +274,9 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
     // define route to set the settings
     app.post(
       '/api/settings',
-      this.isLoggedIn,
+      (req, res, next) => {
+        this.isLoggedIn(req, res, next);
+      },
       bodyParser.json(),
       async (request: MotionAPIRequest<{ key: string; value: any; }>, result) => {
         if (typeof this.settings[request.body.key] !== 'undefined') {
@@ -284,7 +296,9 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
     // define route to trust a device
     app.post(
       '/api/devices/trust',
-      this.isLoggedIn,
+      (req, res, next) => {
+        this.isLoggedIn(req, res, next);
+      },
       bodyParser.json(),
       async (request: MotionAPIRequest<MotionAPITrustRequest>, result) => {
         this.devices.some((device) => {
@@ -307,7 +321,9 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
     // define route to untrust a device
     app.post(
       '/api/devices/untrust',
-      this.isLoggedIn,
+      (req, res, next) => {
+        this.isLoggedIn(req, res, next);
+      },
       bodyParser.json(),
       async (request: MotionAPIRequest<MotionAPIUntrustRequest>, result) => {
         const index = this.trustedDevices.findIndex((trustedDevice) => {
@@ -332,7 +348,9 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
 
     app.get(
       '/api/events',
-      this.isLoggedIn,
+      (req, res, next) => {
+        this.isLoggedIn(req, res, next);
+      },
       bodyParser.json(),
       async (_request, result) => {
         const files = await readdirPromisified(eventsPath);
@@ -348,7 +366,9 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
 
     app.get(
       '/api/events/:event',
-      this.isLoggedIn,
+      (req, res, next) => {
+        this.isLoggedIn(req, res, next);
+      },
       bodyParser.json(),
       async (req, res) => {
         const requestedEvent = join(eventsPath, req.param('event'));
@@ -368,10 +388,14 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
     );
 
     // serve app
-    app.use('/app', this.isLoggedIn, express.static(join(cwd(), '..', 'app', 'www')));
+    app.use('/app', (req, res, next) => {
+      this.isLoggedIn(req, res, next);
+    }, express.static(join(cwd(), '..', 'app', 'www')));
 
     // serve images
-    app.use('/images', this.isLoggedIn, express.static(join(cwd(), 'database', 'images')));
+    app.use('/images', (req, res, next) => {
+      this.isLoggedIn(req, res, next);
+    }, express.static(join(cwd(), 'database', 'images')));
 
     // start https server
     https.createServer({
