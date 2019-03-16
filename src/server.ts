@@ -405,7 +405,7 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
       console.info('Server running...');
     });
 
-    // await this.updateExternalIP();
+    await this.updateExternalIP();
 
     await this.scan();
   }
@@ -414,10 +414,10 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
    * Update external IP
    */
   async updateExternalIP(): Promise<void> {
-    await requestPromiseNative(this.config.dynDnsUpdateUrl);
-
     setInterval(async () => {
       await this.updateExternalIP();
     }, 10 * 60 * 1000);
+
+    await requestPromiseNative(this.config.dynDnsUpdateUrl);
   }
 }
