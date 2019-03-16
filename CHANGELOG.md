@@ -1,3 +1,12 @@
+## [0.1.2](https://github.com/krlwlfrt/motion-server/compare/v0.1.1...v0.1.2) (2019-03-16)
+
+
+### Bug Fixes
+
+* update external ip ([2ee7099](https://github.com/krlwlfrt/motion-server/commit/2ee7099))
+
+
+
 ## [0.1.1](https://github.com/krlwlfrt/motion-server/compare/v0.1.0...v0.1.1) (2019-03-15)
 
 
