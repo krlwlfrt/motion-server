@@ -146,9 +146,9 @@ Please free up space on the disk soon!`,
   /**
    * Scan network for trusted devices
    */
-  async scan() {
+  async scanNetwork() {
     setTimeout(async () => {
-      await this.scan();
+      await this.scanNetwork();
       // @ts-ignore TODO
     }, this.settings._scanTimeout * 1000);
 
@@ -454,19 +454,26 @@ Please free up space on the disk soon!`,
       console.info('Server running...');
     });
 
-    await this.updateExternalIP();
+    await this.checkDiskSpace();
 
-    await this.scan();
+    await this.scanNetwork();
+
+    await this.updateExternalIP();
   }
 
   /**
    * Update external IP
    */
   async updateExternalIP(): Promise<void> {
-    setInterval(async () => {
+    setTimeout(async () => {
       await this.updateExternalIP();
     }, 10 * 60 * 1000);
 
-    await requestPromiseNative(this.config.dynDnsUpdateUrl);
+    try {
+      const msg = await requestPromiseNative(this.config.dynDnsUpdateUrl);
+      console.info(msg);
+    } catch (e) {
+      console.error(e, e.message);
+    }
   }
 }
