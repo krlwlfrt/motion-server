@@ -1,6 +1,6 @@
 {
   "name": "motion-server",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "A server to start/stop motion detection and handle detected motion",
   "main": "lib/server.js",
   "scripts": {
