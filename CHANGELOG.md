@@ -1,3 +1,17 @@
+# [0.2.0](https://github.com/krlwlfrt/motion-server/compare/v0.1.2...v0.2.0) (2019-03-17)
+
+
+### Bug Fixes
+
+* correctly update dynamic dns ([06f18d1](https://github.com/krlwlfrt/motion-server/commit/06f18d1))
+
+
+### Features
+
+* add disk space check ([f4a5c17](https://github.com/krlwlfrt/motion-server/commit/f4a5c17))
+
+
+
 ## [0.1.2](https://github.com/krlwlfrt/motion-server/compare/v0.1.1...v0.1.2) (2019-03-16)
 
 
