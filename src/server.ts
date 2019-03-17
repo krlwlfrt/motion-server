@@ -4,12 +4,15 @@ import * as express from 'express';
 import * as expressSession from 'express-session';
 import {existsSync, mkdirSync, readFileSync} from 'fs';
 import * as https from 'https';
+import {createTransport} from 'nodemailer';
+import * as Mail from 'nodemailer/lib/mailer';
 import * as passport from 'passport';
 import {Strategy} from 'passport-google-oauth2';
 import {basename, join, resolve} from 'path';
 import {cwd} from 'process';
 import * as requestPromiseNative from 'request-promise-native';
 import {exec, which} from 'shelljs';
+import {promisify} from 'util';
 import {
   decorateDevices,
   disableMotion,
@@ -43,6 +46,7 @@ export class Server {
   mode: MotionMode = MotionMode.auto;
   scanMissCount = 0;
   settings = loadSettings();
+  transporter: Mail;
   trustedDevices = loadTrustedDevices();
 
   constructor() {
@@ -72,6 +76,46 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
 
     if (!existsSync(resolve(__dirname, '..', 'database', 'events'))) {
       mkdirSync(resolve(__dirname, '..', 'database', 'events'), {recursive: true});
+    }
+
+    // create transport - has been verified on server startup
+    this.transporter = createTransport({
+      auth: {
+        pass: this.config.smtp.pass,
+        user: this.config.smtp.user,
+      },
+      host: 'smtp.gmail.com',
+      secure: true,
+    });
+  }
+
+  /**
+   * Check disk space
+   */
+  async checkDiskSpace(): Promise<void> {
+    setTimeout(async () => {
+      await this.checkDiskSpace();
+    }, 24 * 60 * 60 * 1000);
+
+    const df = require('df');
+    const dfPromisified = promisify(df);
+
+    const space = await dfPromisified();
+
+    const rootEntry = space.find((entry: any) => {
+      return entry.mountpoint === '/';
+    });
+
+    if (rootEntry.percent > 90) {
+      const message = {
+        from: this.config.smtp.user,
+        subject: '[Motion] Disk space warning',
+        text: `Disk space usage is at ${rootEntry.percent}%!
+Please free up space on the disk soon!`,
+        to: this.config.allowedEmails,
+      };
+
+      await this.transporter.sendMail(message);
     }
   }
 
@@ -142,9 +186,14 @@ openssl req -x509 -newkey rsa:4096 -keyout ${resolve(__dirname, '..', 'config', 
     }
   }
 
+  /**
+   * Start the server
+   */
   async start(): Promise<void> {
     // initialize motion configuration
     await saveMotionConfig(this.settings);
+
+    await this.transporter.verify();
 
     // initialize express
     const app = express();
