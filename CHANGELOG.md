@@ -1,3 +1,12 @@
+# [0.3.0](https://github.com/krlwlfrt/motion-server/compare/v0.2.1...v0.3.0) (2019-03-29)
+
+
+### Features
+
+* remove dependency `local-network-scanner` ([0ef1926](https://github.com/krlwlfrt/motion-server/commit/0ef1926))
+
+
+
 ## [0.2.1](https://github.com/krlwlfrt/motion-server/compare/v0.2.0...v0.2.1) (2019-03-29)
 
 
