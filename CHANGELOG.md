@@ -1,3 +1,12 @@
+## [0.2.1](https://github.com/krlwlfrt/motion-server/compare/v0.2.0...v0.2.1) (2019-03-29)
+
+
+### Bug Fixes
+
+* make sure that service only starts once network is up ([c7e57d7](https://github.com/krlwlfrt/motion-server/commit/c7e57d7))
+
+
+
 # [0.2.0](https://github.com/krlwlfrt/motion-server/compare/v0.1.2...v0.2.0) (2019-03-17)
 
 
