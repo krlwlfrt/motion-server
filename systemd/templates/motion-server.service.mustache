@@ -1,5 +1,7 @@
 [Unit]
 Description=Motion server
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 ExecStart=/usr/bin/env node {{& path}}/dist/cli.js start
