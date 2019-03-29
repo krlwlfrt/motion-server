@@ -35,12 +35,40 @@ export async function sleep(duration: number): Promise<void> {
 /**
  * Get list of devices that are currently active on the network
  */
-export async function getDevicesOnNetwork(): Promise<Array<Required<NetworkDevice>>> {
-  const localNetworkScanner = require('local-network-scanner');
+export async function getDevicesOnNetwork(): Promise<NetworkDevice[]> {
+  return new Promise((resolvePromise, rejectPromise) => {
+    exec('arp-scan -l -x', {silent: true}, (code, stdOut, stdErr) => {
+      if (code === 0) {
+        const hosts = stdOut.split('\n');
+        const networkDevices: NetworkDevice[] = [];
 
-  return new Promise((resolvePromise) => {
-    localNetworkScanner.scan(null, (devices: Array<Required<NetworkDevice>>) => {
-      resolvePromise(devices);
+        console.log(hosts);
+
+        hosts.forEach((host) => {
+          const fields = host.split('\t');
+
+          if (fields.length < 3) {
+            return;
+          }
+
+          const networkDevice: NetworkDevice = {
+            ip: fields[0],
+            mac: fields[1],
+            vendor: fields[2],
+          };
+
+          console.log(networkDevice);
+
+          networkDevices.push(networkDevice);
+        });
+
+        console.log(networkDevices);
+
+        return resolvePromise(networkDevices);
+      }
+
+      console.error(code, stdErr);
+      rejectPromise();
     });
   });
 }

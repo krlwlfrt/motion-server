@@ -20,6 +20,10 @@ export interface NetworkDevice {
    * Whether or not this device is trusted
    */
   trusted?: boolean;
+  /**
+   * Vendor of the device
+   */
+  vendor?: string;
 }
 
 /**
