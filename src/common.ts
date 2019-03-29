@@ -42,12 +42,16 @@ export async function getDevicesOnNetwork(): Promise<NetworkDevice[]> {
         const hosts = stdOut.split('\n');
         const networkDevices: NetworkDevice[] = [];
 
-        console.log(hosts);
-
         hosts.forEach((host) => {
           const fields = host.split('\t');
 
           if (fields.length < 3) {
+            return;
+          }
+
+          if (networkDevices.find((alreadyFoundNetworkDevice) => {
+            return alreadyFoundNetworkDevice.ip === fields[0];
+          })) {
             return;
           }
 
@@ -57,12 +61,8 @@ export async function getDevicesOnNetwork(): Promise<NetworkDevice[]> {
             vendor: fields[2],
           };
 
-          console.log(networkDevice);
-
           networkDevices.push(networkDevice);
         });
-
-        console.log(networkDevices);
 
         return resolvePromise(networkDevices);
       }
