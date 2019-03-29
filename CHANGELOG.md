@@ -1,3 +1,12 @@
+## [0.3.1](https://github.com/krlwlfrt/motion-server/compare/v0.3.0...v0.3.1) (2019-03-29)
+
+
+### Bug Fixes
+
+* remove duplicates from active network devices ([3f529ac](https://github.com/krlwlfrt/motion-server/commit/3f529ac))
+
+
+
 # [0.3.0](https://github.com/krlwlfrt/motion-server/compare/v0.2.1...v0.3.0) (2019-03-29)
 
 
